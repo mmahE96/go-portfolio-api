@@ -36,7 +36,8 @@ func createConnection() *sql.DB {
 
 	//os.Getenv("POSTGRES_URL")
 	// Open the connection
-	db, err := sql.Open("postgres", "postgres://mahir:512627@localhost/blog?sslmode=disable")
+	db, err := sql.Open("postgres", "postgres://ekwwwoarfjjzmq:92e7e65a7e7e439aa49ec5bc45bb1a0a51a49b0705596841003553938655a17d@ec2-34-242-89-204.eu-west-1.compute.amazonaws.com:5432/d6hnola6nvjmb8")
+	//postgres://ekwwwoarfjjzmq:92e7e65a7e7e439aa49ec5bc45bb1a0a51a49b0705596841003553938655a17d@ec2-34-242-89-204.eu-west-1.compute.amazonaws.com:5432/d6hnola6nvjmb8
 
 	if err != nil {
 		panic(err)
@@ -99,8 +100,12 @@ func insertArticle(user models.Article) int64 {
 	// returning userid will return the id of the inserted user
 	sqlStatement := `INSERT INTO articles (title, content, author, date, category, description, slug) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`
 
+	//psql -h ec2-3-231-112-124.compute-1.amazonaws.com -p 5432-U gmsqtpnkywzlsf dl9bag0ac2qt8
 	// the inserted id will store in this id
 	var id int64
+	id = user.Id
+
+	fmt.Println(id)
 
 	// execute the sql statement
 	// Scan function will save the insert id in the id
