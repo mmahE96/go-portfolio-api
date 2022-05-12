@@ -11,6 +11,9 @@ func Router() *mux.Router {
 
 	router := mux.NewRouter()
 
+	router.HandleFunc("/auth/login", middleware.Login).Methods("POST", "OPTIONS")
+	router.HandleFunc("/auth/welcome", middleware.Welcome).Methods("GET", "OPTIONS")
+
 	router.HandleFunc("/api/article/{id}", middleware.GetArticle).Methods("GET", "OPTIONS")
 	router.HandleFunc("/api/articles", middleware.GetAllArticles).Methods("GET", "OPTIONS")
 	router.HandleFunc("/api/newarticle", middleware.CreateArticle).Methods("POST", "OPTIONS")
