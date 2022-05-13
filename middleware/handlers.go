@@ -147,6 +147,12 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		Expires: expirationTime,
 	})
 
+	http.SetCookie(w, &http.Cookie{
+		Name:    "userData",
+		Value:   creds.Username,
+		Expires: expirationTime,
+	})
+
 }
 
 //AUTH ENDS
