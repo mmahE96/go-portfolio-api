@@ -25,7 +25,7 @@ import (
 var jwtKey = []byte("my_secret_key")
 
 var users = map[string]string{
-	"user1": "password1",
+	"mahe":  "512627",
 	"user2": "password2",
 }
 
@@ -43,19 +43,21 @@ type Claims struct {
 }
 
 func Welcome(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "*")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
 	// We can obtain the session token from the requests cookies, which come with every request
 	c, err := r.Cookie("token")
 	if err != nil {
 		if err == http.ErrNoCookie {
 			// If the cookie is not set, return an unauthorized status
 			w.WriteHeader(http.StatusUnauthorized)
-			json.NewEncoder(w).Encode("Not logged in")
 			return
 		}
 		// For any other type of error, return a bad request status
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode("Not logged in")
-
 		return
 	}
 
@@ -72,6 +74,7 @@ func Welcome(w http.ResponseWriter, r *http.Request) {
 	tkn, err := jwt.ParseWithClaims(tknStr, claims, func(token *jwt.Token) (interface{}, error) {
 		return jwtKey, nil
 	})
+
 	if err != nil {
 		if err == jwt.ErrSignatureInvalid {
 			w.WriteHeader(http.StatusUnauthorized)
@@ -88,15 +91,13 @@ func Welcome(w http.ResponseWriter, r *http.Request) {
 	// Finally, return the welcome message to the user, along with their
 	// username given in the token
 	w.Write([]byte(fmt.Sprintf("Welcome %s!", claims.Username)))
-
 }
 
 func Login(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Context-Type", "application/x-www-form-urlencoded")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Headers", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PATCH, PUT, DELETE, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Credentials", "true")
+	w.Header().Set("Access-Control-Allow-Methods", "POST")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 	var creds Credentials
 	// Get the JSON body and decode into credentials
 	err := json.NewDecoder(r.Body).Decode(&creds)
@@ -119,7 +120,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 
 	// Declare the expiration time of the token
 	// here, we have kept it as 5 minutes
-	expirationTime := time.Now().Add(5 * time.Minute)
+	expirationTime := time.Now().Add(20 * time.Minute)
 	// Create the JWT claims, which includes the username and expiry time
 	claims := &Claims{
 		Username: creds.Username,
@@ -147,12 +148,6 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		Expires: expirationTime,
 	})
 
-	http.SetCookie(w, &http.Cookie{
-		Name:    "userData",
-		Value:   creds.Username,
-		Expires: expirationTime,
-	})
-
 }
 
 //AUTH ENDS
@@ -171,6 +166,7 @@ func createConnection() *sql.DB {
 	if err != nil {
 		log.Fatalf("Error loading .env file")
 	}
+	fmt.Println("Tying to connect....")
 
 	//os.Getenv("POSTGRES_URL")
 	// Open the connection
@@ -196,10 +192,10 @@ func createConnection() *sql.DB {
 func CreateArticle(w http.ResponseWriter, r *http.Request) {
 	// set the header to content type x-www-form-urlencoded
 	// Allow all origin to handle cors issue
-	w.Header().Set("Context-Type", "application/x-www-form-urlencoded")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "POST")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 
 	// create an empty user of type models.Article
 	var article models.Article
@@ -435,4 +431,117 @@ func deleteArticle(id int64) int64 {
 	fmt.Printf("Total rows/record affected %v", rowsAffected)
 
 	return rowsAffected
+}
+
+//create project
+func CreateProject(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Context-Type", "application/x-www-form-urlencoded")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "POST")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+	var project models.Project
+
+	// decode the json request to project
+	err := json.NewDecoder(r.Body).Decode(&project)
+
+	if err != nil {
+		log.Fatalf("Unable to decode the request body.  %v", err)
+	}
+
+	// call insert project function and pass the project
+	insertID := insertProject(project)
+
+	// format a response object
+	res := response{
+		ID:      insertID,
+		Message: "Project created successfully",
+	}
+
+	// send the response
+	json.NewEncoder(w).Encode(res)
+}
+
+//insert project
+func insertProject(project models.Project) int64 {
+	// create the postgres db connection
+	db := createConnection()
+
+	// close the db connection
+	defer db.Close()
+
+	// create the insert sql query
+	// returning articleid will return the article id of the newly inserted article
+	sqlStatement := `INSERT INTO projects (id, title, description, year_done, client_name, category, date) VALUES ($1, $2, $3, $4, $5, $6, $7 ) RETURNING id`
+
+	// execute the sql statement
+	var id int64
+	err := db.QueryRow(sqlStatement, &project.Id, &project.Title, &project.Description, &project.YearDone, &project.ClientName, &project.Category, &project.Date).Scan(&id)
+
+	if err != nil {
+		log.Fatalf("Unable to execute the query. %v", err)
+	}
+
+	fmt.Printf("Inserted a single record %v", id)
+
+	return id
+
+}
+
+//get projects from db
+func GetProjects(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Context-Type", "application/x-www-form-urlencoded")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	// get all the users in the db
+	users, err := getAllProjects()
+
+	if err != nil {
+		log.Fatalf("Unable to get all user. %v", err)
+	}
+
+	// send all the users as response
+	json.NewEncoder(w).Encode(users)
+}
+
+//get all projects
+func getAllProjects() ([]models.Project, error) {
+	// create the postgres db connection
+	db := createConnection()
+
+	// close the db connection
+	defer db.Close()
+
+	var projects []models.Project
+
+	// create the select sql query
+	sqlStatement := `SELECT * FROM projects`
+
+	// execute the sql statement
+	rows, err := db.Query(sqlStatement)
+
+	if err != nil {
+		log.Fatalf("Unable to execute the query. %v", err)
+	}
+
+	// close the statement
+	defer rows.Close()
+
+	// iterate over the rows
+	for rows.Next() {
+		var project models.Project
+
+		// unmarshal the row object to user
+		err = rows.Scan(&project.Id, &project.Title, &project.Description, &project.ClientName, &project.Date, &project.Category, &project.YearDone)
+
+		if err != nil {
+			log.Fatalf("Unable to scan the row. %v", err)
+		}
+
+		// append the user in the users slice
+		projects = append(projects, project)
+
+	}
+
+	// return empty user on error
+	return projects, err
 }

@@ -11,6 +11,7 @@ func main() {
 	//err := godotenv.Load()
 
 	r := router.Router()
+
 	// fs := http.FileServer(http.Dir("build"))
 	// http.Handle("/", fs)
 
